@@ -1,7 +1,6 @@
-from fastapi import APIRouter, HTTPException, Depends, Response
+from fastapi import APIRouter, HTTPException, Response
 from pydantic import BaseModel
 from services.crud.userservice import UserService
-from webui.auth.dependencies import get_current_user
 import logging
 
 router = APIRouter()

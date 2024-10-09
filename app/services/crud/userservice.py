@@ -2,7 +2,6 @@ from typing import Dict, Any, Optional
 from sqlmodel import Session, select
 from database.database import get_session
 from models.user import User
-from models.transaction import Transaction
 from webui.auth.hash_password import hash_password, verify_password
 from webui.auth.jwt_handler import create_access_token
 import logging
@@ -42,9 +41,7 @@ class UserService:
             user = session.get(User, user_id)
             if user:
                 user.balance += amount
-                transaction = Transaction(user_id=user_id, amount=amount, description="Balance top-up")
                 session.add(user)
-                session.add(transaction)
                 session.commit()
                 logger.info(f"Balance added: {amount} to user: {user_id}")
 

@@ -9,14 +9,19 @@
 # # Проверка текущих путей
 # print("Current sys.path:", sys.path)
 
-import os
 import time
 import pika
 import json
-from models.mlmodelmanager import MLModelManager
 from database.database import get_session
+from models.mlmodelmanager import MLModelManager
 from models.user import User
 from models.mltask import MLTask
+
+import sys
+import os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+
 
 # Создание экземпляра менеджера моделей и загрузка моделей
 model_manager = MLModelManager()

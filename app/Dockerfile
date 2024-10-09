@@ -18,6 +18,8 @@ COPY ./models/scaler.joblib /app/models/
 COPY ./models/tfidf_vectorizer.joblib /app/models/
 COPY ./models/feature_names.joblib /app/models/
 
+# Проверка содержимого директории моделей
+RUN ls -al /app/models/
 
 EXPOSE 8080
 

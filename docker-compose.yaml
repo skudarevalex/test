@@ -7,10 +7,8 @@ services:
     image: test_1:latest
     env_file:
       - ./app/.env
-    volumes:
-      - ./app:/app
     environment:
-      - PYTHONPATH=/app
+      - PYTHONPATH=/app:/app/models
       - RABBITMQ_HOST=${RABBITMQ_HOST}
       - RABBITMQ_PORT=${RABBITMQ_PORT}
       - RABBITMQ_USER=${RABBITMQ_USER}
@@ -63,6 +61,7 @@ services:
 
   worker:
     build: ./app/workers/
+    #command: tail -f /dev/null
     command: python worker.py
     depends_on:
       - rabbitmq
@@ -80,13 +79,11 @@ services:
       - RABBITMQ_PASS=${RABBITMQ_PASS}
       - RABBITMQ_HOST=${RABBITMQ_HOST}
       - RABBITMQ_PORT=${RABBITMQ_PORT}
-    scale: 3
+    scale: 3 # Указываем количество экземпляров воркеров
 
   webui:
     build: ./app/webui/
     image: ui_1:latest
-    volumes:
-      - ./app:/app
     ports:
       - "8501:8501"
     environment:

@@ -3,76 +3,16 @@ import numpy as np
 import joblib
 from catboost import CatBoostRegressor
 from typing import Optional
+from models.user import User  # Импортируем User из user.py
 from database.database import get_session
-from sqlmodel import SQLModel, Field
-
-
-# Класс сущности пользователя для представления пользователя в системе
-class User(SQLModel, table=True):
-    # Инициализация пользователя с id, именем пользователя, паролем и балансом
-    id: Optional[int] = Field(default=None, primary_key=True)
-    username: str = Field(index=True)
-    password: str
-    balance: int = Field(default=0)
-
-    def check_password(self, password: str) -> bool:
-        # Проверить, совпадает ли предоставленный пароль с паролем пользователя
-        return self.password == password
-
-    def add_balance(self, amount: int) -> None:
-        # Добавить указанную сумму к балансу пользователя
-        self.balance += amount
-        self.save()
-
-    def subtract_balance(self, amount: int) -> bool:
-        # Вычесть указанную сумму с баланса пользователя, если достаточно средств
-        if self.balance >= amount:
-            self.balance -= amount
-            self.save()
-            return True
-        return False
-
-    def save(self) -> None:
-        # Сохранить изменения в базе данных
-        with get_session() as session:
-            session.add(self)
-            session.commit()
-            session.refresh(self)
-
-    @classmethod
-    def create(cls, username: str, password: str) -> 'User':
-        # Создать нового пользователя в базе данных и вернуть экземпляр пользователя
-        with get_session() as session:
-            new_user = User(username=username, password=password, balance=0)
-            session.add(new_user)
-            session.commit()
-            session.refresh(new_user)
-            return new_user
-
-    @classmethod
-    def get(cls, username: str, password: str) -> Optional['User']:
-        # Получить пользователя из базы данных по имени пользователя и паролю
-        with get_session() as session:
-            user = session.query(User).filter_by(username=username).first()
-            if user and user.check_password(password):
-                return user
-            return None
-
-    @classmethod
-    def get_by_id(cls, user_id: int) -> Optional['User']:
-        # Получить пользователя по его ID
-        with get_session() as session:
-            user = session.query(User).filter_by(id=user_id).first()
-            return user
 
 # Загрузка модели и других необходимых объектов
 loaded_catboost = CatBoostRegressor()
-loaded_catboost.load_model('best_catboost_model.cbm')
-loaded_target_encoder = joblib.load('target_encoder.joblib')
-loaded_scaler = joblib.load('scaler.joblib')
-loaded_tfidf = joblib.load('tfidf_vectorizer.joblib')
-feature_names = joblib.load('feature_names.joblib')
-
+loaded_catboost.load_model('/app/models/best_catboost_model.cbm')
+loaded_target_encoder = joblib.load('/app/models/target_encoder.joblib')
+loaded_scaler = joblib.load('/app/models/scaler.joblib')
+loaded_tfidf = joblib.load('/app/models/tfidf_vectorizer.joblib')
+feature_names = joblib.load('/app/models/feature_names.joblib')
 
 def predict_salary(input_data):
     """
