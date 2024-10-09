@@ -222,13 +222,14 @@ def dashboard_page():
             "company_size": company_size.split(":")[0]
         }
 
-        # Отправка запроса в API
+        # Отправка запроса в API через MLService
         response = api_request("POST", "/prediction/predict_salary", request_data)
         if response and response.status_code == 200:
             prediction = response.json()
             st.success(f"Предсказанная зарплата: ${prediction['predicted_salary']:.2f}")
         else:
             st.error("Ошибка получения предсказания")
+
 
     # История предсказаний
     st.subheader("История предсказаний")

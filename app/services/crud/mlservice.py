@@ -5,12 +5,12 @@ import json
 from typing import Dict, Any
 from models.user import User
 from models.mltask import MLTask
-from models.mlmodelmanager import MLModelManager
+from models.ml_predictor_module import predict_salary
+from database.database import get_session
 
 class MLService:
-    def __init__(self, model_manager: MLModelManager):
-        # Инициализация менеджера моделей и переменных для подключения к RabbitMQ
-        self._model_manager = model_manager
+    def __init__(self):
+        # Инициализация переменных для подключения к RabbitMQ
         self._connection = None
         self._channel = None
         self._connect_to_rabbitmq()
@@ -38,39 +38,33 @@ class MLService:
                     # Если все попытки исчерпаны, выбрасываем исключение
                     raise
 
-    def process_task(self, user: User, model_id: int, input_data: str) -> Dict[str, Any]:
-        # Парсинг входных данных
-        input_values = input_data.split(',')
-        valid_data, invalid_data = [], []
-
-        # Валидация данных: разделение на валидные и невалидные данные
-        for item in input_values:
-            try:
-                valid_data.append(float(item))
-            except ValueError:
-                invalid_data.append(item)
-
-        # Проверка наличия валидных данных
-        if not valid_data:
-            return {"status": "fail", "message": "No valid data provided", "invalid_data": invalid_data}
-
-        # Расчет стоимости выполнения задачи
-        cost = len(valid_data) * 1  # Пример расчета стоимости
+    def process_task(self, user: User, input_data: Dict[str, Any]) -> Dict[str, Any]:
         # Проверка баланса пользователя
+        cost = 10  # Стоимость предсказания
         if not user.subtract_balance(cost):
             return {"status": "fail", "message": "Insufficient balance"}
 
-        # Формирование задачи для отправки в RabbitMQ
-        task = {
-            "user_id": user.id,
-            "model_id": model_id,
-            "input_data": valid_data,
-            "invalid_data": invalid_data,
-            "cost": cost
-        }
-        # Отправка задачи в очередь 'ml_tasks'
-        self._channel.basic_publish(exchange='', routing_key='ml_tasks', body=json.dumps(task))
-        return {"status": "success", "message": "Task submitted to ML service"}
+        # Получение предсказания зарплаты
+        try:
+            prediction = predict_salary(input_data)
+            predicted_salary = prediction['predicted_salary'].iloc[0]
+        except Exception as e:
+            return {"status": "fail", "message": str(e)}
+
+        # Создание записи о задаче в базе данных
+        with get_session() as session:
+            ml_task = MLTask.create(
+                user_id=user.id,
+                model_id=1,  # Замените на актуальный идентификатор модели, если необходимо
+                input_data=json.dumps(input_data),
+                output_data=str(predicted_salary),
+                status="completed",
+                cost=cost
+            )
+            session.add(ml_task)
+            session.commit()
+
+        return {"status": "success", "predicted_salary": predicted_salary}
 
     def close(self):
         # Закрытие соединения с RabbitMQ
