@@ -4,12 +4,12 @@ import pandas as pd
 from services.crud.mlservice import MLService
 from database.database import get_session
 from models.user import User as UserModel
+from models.mltask import MLTask
 from webui.auth.dependencies import get_current_user
 
 router = APIRouter()
 ml_service = MLService()
 
-# Определение модели данных для запроса
 class PredictionRequest(BaseModel):
     work_year: int
     experience_level: str
@@ -21,27 +21,36 @@ class PredictionRequest(BaseModel):
     company_location: str
     company_size: str
 
-# Определение эндпойнта для предсказаний
 @router.post("/predict_salary")
-async def get_prediction(request: PredictionRequest, current_user: UserModel = Depends(get_current_user)):
+async def create_prediction_task(request: PredictionRequest, current_user: UserModel = Depends(get_current_user)):
     try:
-        # Преобразование входных данных в формат словаря
         input_data = request.dict()
-
-        # Открытие сессии для работы с базой данных
         with get_session() as session:
             user = session.get(UserModel, current_user.id)
             if not user:
                 raise HTTPException(status_code=404, detail="User not found")
-
-            # Обработка задачи с использованием MLService
-            result = ml_service.process_task(user, input_data)
+            
+            result = ml_service.create_task(user, input_data)
             if result["status"] == "fail":
                 raise HTTPException(status_code=400, detail=result["message"])
             
-            # Сохранение изменений (например, обновленный баланс)
             session.commit()
+        
+        return {"task_id": result["task_id"], "message": "Prediction task created successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-        return {"predicted_salary": result["predicted_salary"]}
+@router.get("/prediction_status/{task_id}")
+async def get_prediction_status(task_id: int, current_user: UserModel = Depends(get_current_user)):
+    try:
+        with get_session() as session:
+            task = session.get(MLTask, task_id)
+            if not task or task.user_id != current_user.id:
+                raise HTTPException(status_code=404, detail="Task not found")
+            
+            if task.status == "completed":
+                return {"status": "completed", "predicted_salary": task.output_data}
+            else:
+                return {"status": task.status}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

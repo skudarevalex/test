@@ -40,8 +40,8 @@ services:
     volumes:
       - ./rabbitmq:/var/lib/rabbitmq
     ports:
-      #- 15672:15672
-      - 5673:5672
+      - 15672:15672
+      - 5672:5672
     healthcheck:
       test: [ "CMD", "rabbitmq-diagnostics", "check_port_connectivity" ]
       interval: 10s

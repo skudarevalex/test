@@ -3,6 +3,7 @@ import requests
 import extra_streamlit_components as stx
 from datetime import datetime, timedelta
 from auth.jwt_handler import decode_access_token
+import time
 
 # Основной адрес API
 API_URL = "http://app:8080"
@@ -222,13 +223,28 @@ def dashboard_page():
             "company_size": company_size.split(":")[0]
         }
 
-        # Отправка запроса в API через MLService
+        # Отправка запроса в API для создания задачи предсказания
         response = api_request("POST", "/prediction/predict_salary", request_data)
         if response and response.status_code == 200:
-            prediction = response.json()
-            st.success(f"Предсказанная зарплата: ${prediction['predicted_salary']:.2f}")
+            task_data = response.json()
+            task_id = task_data["task_id"]
+            st.info(f"Задача на предсказание создана. ID задачи: {task_id}")
+
+            # Ожидание завершения задачи
+            with st.spinner("Ожидание результатов предсказания..."):
+                while True:
+                    status_response = api_request("GET", f"/prediction/prediction_status/{task_id}")
+                    if status_response and status_response.status_code == 200:
+                        status_data = status_response.json()
+                        if status_data["status"] == "completed":
+                            st.success(f"Предсказанная зарплата: ${float(status_data['predicted_salary']):.2f}")
+                            break
+                        elif status_data["status"] == "failed":
+                            st.error("Ошибка при выполнении предсказания")
+                            break
+                    time.sleep(1)  # Пауза перед следующей проверкой
         else:
-            st.error("Ошибка получения предсказания")
+            st.error("Ошибка при создании задачи предсказания")
 
 
     # История предсказаний
