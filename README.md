@@ -46,18 +46,7 @@
    cd <директория-проекта>
    ```
 
-2. Создайте файл `.env` в корневой директории проекта и заполните его необходимыми переменными окружения:
-   ```
-   DB_HOST=database
-   DB_PORT=5432
-   DB_USER=your_username
-   DB_PASS=your_password
-   DB_NAME=your_database_name
-   RABBITMQ_USER=your_rabbitmq_user
-   RABBITMQ_PASS=your_rabbitmq_password
-   RABBITMQ_HOST=rabbitmq
-   RABBITMQ_PORT=5672
-   ```
+2. Создайте файл `.env` в корневой директории проекта и заполните его необходимыми переменными окружения.
 
 3. Запустите проект с помощью Docker Compose:
    ```
@@ -70,10 +59,12 @@
 
 - `/user/register` (POST): Регистрация нового пользователя
 - `/user/login` (POST): Аутентификация пользователя
+- `/user/{user_id}` (GET): Получение информации о пользователе
 - `/balance/{user_id}` (GET): Получение баланса пользователя
 - `/balance/{user_id}/add` (POST): Пополнение баланса пользователя
 - `/prediction/predict_salary` (POST): Создание задачи на предсказание зарплаты
 - `/prediction/prediction_status/{task_id}` (GET): Получение статуса задачи предсказания
+- `/history/{user_id}` (GET): Получение истории предсказаний пользователя
 
 ## Тестирование
 
