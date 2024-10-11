@@ -19,11 +19,14 @@ class MLService:
         while attempts > 0:
             try:
                 print("Attempting to connect to RabbitMQ, attempts left:", attempts)
-                self._connection = pika.BlockingConnection(pika.ConnectionParameters(
+                parameters = pika.ConnectionParameters(
                     host=os.getenv('RABBITMQ_HOST'),
                     port=int(os.getenv('RABBITMQ_PORT')),
-                    credentials=pika.PlainCredentials(os.getenv('RABBITMQ_USER'), os.getenv('RABBITMQ_PASS'))
-                ))
+                    credentials=pika.PlainCredentials(os.getenv('RABBITMQ_USER'), os.getenv('RABBITMQ_PASS')),
+                    heartbeat=300,  # Устанавливаем heartbeat на 300 секунд
+                    blocked_connection_timeout=150  # Таймаут для блокированных соединений
+                )
+                self._connection = pika.BlockingConnection(parameters)
                 self._channel = self._connection.channel()
                 self._channel.queue_declare(queue='ml_tasks')
                 print("Connected to RabbitMQ successfully")
@@ -36,6 +39,8 @@ class MLService:
                     raise
 
     def create_task(self, user: User, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        if not self._connection or self._connection.is_closed:
+            self._connect_to_rabbitmq()
         cost = 10
         if not user.subtract_balance(cost):
             return {"status": "fail", "message": "Insufficient balance"}

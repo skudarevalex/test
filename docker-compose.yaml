@@ -18,6 +18,10 @@ services:
       - rabbitmq
     ports:
       - "8080:8080"
+    sysctls:
+      - net.ipv4.tcp_keepalive_time=60
+      - net.ipv4.tcp_keepalive_intvl=10
+      - net.ipv4.tcp_keepalive_probes=6
 
   web-proxy:
     build: ./nginx
@@ -80,6 +84,10 @@ services:
       - RABBITMQ_HOST=${RABBITMQ_HOST}
       - RABBITMQ_PORT=${RABBITMQ_PORT}
     scale: 3 # Указываем количество экземпляров воркеров
+    sysctls:
+      - net.ipv4.tcp_keepalive_time=60
+      - net.ipv4.tcp_keepalive_intvl=10
+      - net.ipv4.tcp_keepalive_probes=6
 
   webui:
     build: ./app/webui/

@@ -43,11 +43,14 @@ def connect_to_rabbitmq():
     while attempts > 0:
         try:
             print("Attempting to connect to RabbitMQ, attempts left:", attempts)
-            connection = pika.BlockingConnection(pika.ConnectionParameters(
+            parameters = pika.ConnectionParameters(
                 host=os.getenv('RABBITMQ_HOST'),
                 port=int(os.getenv('RABBITMQ_PORT')),
-                credentials=pika.PlainCredentials(os.getenv('RABBITMQ_USER'), os.getenv('RABBITMQ_PASS'))
-            ))
+                credentials=pika.PlainCredentials(os.getenv('RABBITMQ_USER'), os.getenv('RABBITMQ_PASS')),
+                heartbeat=300,  # Устанавливаем heartbeat на 300 секунд
+                blocked_connection_timeout=150  # Таймаут для блокированных соединений
+            )
+            connection = pika.BlockingConnection(parameters)
             print("Соединение с RabbitMQ установлено")
             return connection
         except pika.exceptions.AMQPConnectionError as e:

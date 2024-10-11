@@ -1,6 +1,8 @@
-from fastapi import APIRouter, HTTPException, Response
+from fastapi import APIRouter, HTTPException, Response, Depends
 from pydantic import BaseModel
 from services.crud.userservice import UserService
+from models.user import User
+from webui.auth.dependencies import get_current_user
 import logging
 
 router = APIRouter()
@@ -41,4 +43,15 @@ def login(response: Response, user: UserLogin):
     )
     
     logger.info(f"User logged in successfully: {user.username}")
-    return {"access_token": result["access_token"], "token_type": "bearer"}
+    return {
+        "access_token": result["access_token"],
+        "token_type": "bearer",
+        "user_id": result["user_id"],
+        "username": result["username"]
+    }
+
+@router.get("/{user_id}")
+def get_user(user_id: int, current_user: User = Depends(get_current_user)):
+    if current_user.id != user_id:
+        raise HTTPException(status_code=403, detail="Not authorized to view this user info")
+    return {"username": current_user.username}

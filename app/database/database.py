@@ -1,4 +1,5 @@
 from sqlmodel import SQLModel, Session, create_engine 
+from sqlalchemy import text
 from contextlib import contextmanager
 from .config import get_settings
 
@@ -18,5 +19,10 @@ def get_session():
         session.close()
         
 def init_db():
-    SQLModel.metadata.drop_all(engine)
+    # Удаление таблиц с учетом зависимостей
+    with engine.begin() as conn:
+        conn.execute(text("DROP TABLE IF EXISTS mltask CASCADE"))
+        conn.execute(text("DROP TABLE IF EXISTS \"user\" CASCADE"))
+    
+    # Создание новых таблиц
     SQLModel.metadata.create_all(engine)

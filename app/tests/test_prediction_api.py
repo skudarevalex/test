@@ -1,13 +1,34 @@
 import pytest
-import requests
+from fastapi.testclient import TestClient
+from api import app
+from services.crud.userservice import UserService
+from webui.auth.jwt_handler import create_access_token
 
-API_URL = "http://app:8080"
+client = TestClient(app)
+user_service = UserService()
 
-def test_predict():
-    login_response = requests.post(f"{API_URL}/user/login", json={"username": "test_user", "password": "test_password"})
-    token = login_response.json()["access_token"]
-    headers = {"Authorization": f"Bearer {token}"}
-    
-    response = requests.post(f"{API_URL}/prediction", json={"model_id": 1, "input_data": "1.0, 2.0, 3.0"}, headers=headers)
+@pytest.fixture
+def test_user():
+    user = user_service.register("test_user", "test_password")
+    return user
+
+@pytest.fixture
+def auth_headers(test_user):
+    access_token = create_access_token(data={"sub": str(test_user["user_id"])})
+    return {"Authorization": f"Bearer {access_token}"}
+
+def test_create_prediction_task(test_user, auth_headers):
+    prediction_data = {
+        "work_year": 2024,
+        "experience_level": "SE",
+        "employment_type": "FT",
+        "job_category": "Data Science",
+        "job_tags": "python,machine learning",
+        "employee_residence": "US",
+        "remote_ratio": 100,
+        "company_location": "US",
+        "company_size": "L"
+    }
+    response = client.post("/prediction/predict_salary", json=prediction_data, headers=auth_headers)
     assert response.status_code == 200
-    assert "prediction" in response.json()
+    assert "task_id" in response.json()

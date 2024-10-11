@@ -22,7 +22,12 @@ class UserService:
             session.commit()
             session.refresh(new_user)
             logger.info(f"User registered: {username}")
-            return {"status": "success", "message": "User registered successfully"}
+            return {
+                "status": "success", 
+                "message": "User registered successfully", 
+                "user_id": new_user.id,
+                "username": new_user.username
+            }
 
     def login(self, username: str, password: str) -> Dict[str, Any]:
         # Вход пользователя в систему
@@ -31,7 +36,7 @@ class UserService:
             if user and verify_password(password, user.password):
                 access_token = create_access_token(data={"sub": str(user.id)})
                 logger.info(f"User authenticated: {username}")
-                return {"status": "success", "access_token": access_token, "user_id": user.id}
+                return {"status": "success", "access_token": access_token, "user_id": user.id, "username": user.username}
             logger.warning(f"Invalid credentials for user: {username}")
             return {"status": "fail", "message": "Invalid username or password"}
 

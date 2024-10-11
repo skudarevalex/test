@@ -4,6 +4,7 @@ import extra_streamlit_components as stx
 from datetime import datetime, timedelta
 from auth.jwt_handler import decode_access_token
 import time
+import pandas as pd
 
 # Основной адрес API
 API_URL = "http://app:8080"
@@ -79,6 +80,7 @@ def login_page():
             data = response.json()
             token = data.get("access_token")
             user_id = data.get("user_id")
+            username = data.get("username")
             set_token(token)
             st.session_state.logged_in = True
             st.session_state.username = username
@@ -181,10 +183,10 @@ def dashboard_page():
     )
 
     # Теги работы
-    job_tags = st.text_input("Теги работы (например, python, sql, aws)")
+    job_tags = st.text_input("Ваши навыки (например, python, sql, aws)")
 
     # Место проживания сотрудника
-    employee_residence = st.text_input("Страна проживания сотрудника (код страны ISO 3166)")
+    employee_residence = st.text_input("Страна проживания сотрудника (например, RUS)")
 
     # Формат удаленной работы
     remote_ratio = st.selectbox(
@@ -197,7 +199,7 @@ def dashboard_page():
     )
 
     # Местоположение компании
-    company_location = st.text_input("Страна расположения компании (код страны ISO 3166)")
+    company_location = st.text_input("Страна расположения компании (например, RUS)")
 
     # Размер компании
     company_size = st.selectbox(
@@ -254,13 +256,31 @@ def dashboard_page():
         if response and response.status_code == 200:
             history = response.json()
             if history:
-                for item in history:
-                    st.write(f"Дата: {item.get('created_at', 'Нет данных')}, "
-                             f"Модель: {item.get('model_id', 'Нет данных')}, "
-                             f"Ввод: {item.get('input_data', 'Нет данных')}, "
-                             f"Вывод: {item.get('output_data', 'Нет данных')}, "
-                             f"Статус: {item.get('status', 'Нет данных')}, "
-                             f"Стоимость: {item.get('cost', 'Нет данных')}")
+                # Преобразуем историю в DataFrame
+                df = pd.DataFrame(history)
+                
+                # Преобразуем даты
+                df['created_at'] = pd.to_datetime(df['created_at']).dt.strftime('%Y-%m-%d %H:%M:%S')
+                
+                # Преобразуем входные и выходные данные
+                df['input_data'] = df['input_data'].apply(lambda x: '\n'.join([f"{k}: {v}" for k, v in eval(x).items()]))
+                df['output_data'] = df['output_data'].apply(lambda x: f"{float(x):.2f}" if x else '')
+                
+                # Переименовываем столбцы для лучшего отображения
+                df = df.rename(columns={
+                    'created_at': 'Дата',
+                    'model_id': 'Модель',
+                    'input_data': 'Входные данные',
+                    'output_data': 'Предсказанная зарплата',
+                    'status': 'Статус',
+                    'cost': 'Стоимость'
+                })
+                
+                # Изменяем порядок столбцов
+                df = df[['Дата', 'Модель', 'Входные данные', 'Предсказанная зарплата', 'Статус', 'Стоимость']]
+                
+                # Отображаем таблицу
+                st.table(df)
             else:
                 st.write("История предсказаний пуста")
         else:
@@ -292,11 +312,13 @@ def main():
             decoded_token = decode_access_token(token)
             if decoded_token:
                 st.session_state.logged_in = True
-                st.session_state.username = decoded_token.get("sub")
                 st.session_state.user_id = decoded_token.get("sub")
-                st.sidebar.write(f"Привет, {st.session_state.username}!")
-            else:
-                raise ValueError("Invalid token")
+                # Получаем имя пользователя по ID
+                user_info = api_request("GET", f"/user/{st.session_state.user_id}")
+                if user_info and user_info.status_code == 200:
+                    st.session_state.username = user_info.json().get("username")
+                else:
+                    st.session_state.username = "Пользователь"  # Fallback, если не удалось получить имя
         except Exception as e:
             st.error(f"Ошибка проверки токена: {e}")
             st.session_state.logged_in = False
